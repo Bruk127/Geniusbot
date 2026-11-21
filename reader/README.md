@@ -4,16 +4,24 @@ A calm AI reader for studying. It splits text into breath-sized phrases, reads t
 
 Built for the case where a lecture or a chapter runs faster than your hand. The reader waits. You write. If you fall behind, hit repeat.
 
-## Run
+## Always-on hosting (GitHub Pages)
+
+`reader/site/` is a fully static build of the reader. It talks to the cent provider directly from the browser (the API allows CORS), and keeps prepped scripts and edits in localStorage. No server, no tunnel, no sleep.
+
+One-time setup on the repo: **Settings → Pages → Build and deployment → Source: GitHub Actions**. After that, every push to `main` deploys automatically via `.github/workflows/deploy-pages.yml`.
+
+Site: `https://bruk127.github.io/Geniusbot/`
+
+Open it, click **key** in the top-right, paste your `cai_...` key once, and use it like the local app. The key stays in that browser's localStorage and is sent only to `api.cent-ai.dev`. Photos use the vision model; PDFs and docx are read in the browser. Saved scripts are per-browser, so `?s=` links from the local server do not carry over — paste the text or upload the file again.
+
+## Run locally
 
 ```bash
 cd reader
 node server.mjs
 ```
 
-Open <http://localhost:8787>.
-
-No install step. No dependencies. Node 20+.
+Open <http://localhost:8787>. The local server keeps the key out of the browser, adds tesseract OCR and disk caching, and is the better setup for long documents.
 
 ## The AI provider
 
