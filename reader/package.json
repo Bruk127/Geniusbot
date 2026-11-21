@@ -1,0 +1,17 @@
+{
+  "name": "readslow",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Calm AI reading assistant — breath-sized phrases, slow speech, one-click repeat.",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node --watch server.mjs",
+    "prep": "node prep.mjs",
+    "list": "node prep.mjs --list",
+    "tunnel": "cloudflared tunnel --url http://localhost:8787 --no-autoupdate"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

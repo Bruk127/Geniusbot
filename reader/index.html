@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ReadSlow — calm AI reader</title>
+<meta name="description" content="A calm reader for students: breath-sized phrases, slow speech, one-click repeat." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b4441a'/%3E%3Cpath d='M9 10h9a4 4 0 0 1 0 8H9zm0 8h6a4 4 0 0 1 0 8H9z' fill='%23fff8f2'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true"></span>
+    <span class="brand-name">ReadSlow</span>
+    <span class="brand-sub">calm reader</span>
+  </div>
+  <div class="top-right">
+    <span id="aiStatus" class="pill" data-state="wait">checking…</span>
+    <button id="dimBtn" class="ghost small" type="button" title="Dim the room">dim</button>
+  </div>
+</header>
+
+<main>
+  <section class="source" aria-label="Source text">
+    <div class="source-head">
+      <h2>Source</h2>
+      <span id="counts" class="muted">0 words</span>
+    </div>
+
+    <textarea id="source" spellcheck="false" placeholder="Paste your notes, a chapter, an article.&#10;&#10;It gets split into breath-sized phrases, read slowly, and repeated whenever you ask."></textarea>
+
+    <div class="source-actions">
+      <button id="editBtn" class="edit" type="button" title="Fix OCR errors and page junk with AI, then prep">AI Edit</button>
+      <button id="uploadBtn" class="upload" type="button" title="Upload text, PDF, docx or a photo">Upload / photo</button>
+      <button id="prepBtn" class="primary" type="button">Prep with AI</button>
+      <select id="style" class="style-select" title="Reading style">
+        <option value="study">study</option>
+        <option value="exam">exam</option>
+        <option value="story">story</option>
+      </select>
+    </div>
+
+    <div class="source-actions secondary">
+      <button id="localBtn" class="ghost small" type="button">Re-chunk</button>
+      <button id="sampleBtn" class="ghost small" type="button">Sample</button>
+      <button id="clearBtn" class="ghost small danger" type="button">Clear</button>
+    </div>
+    <input type="file" id="fileInput" accept=".txt,.md,.csv,.json,.pdf,.docx,.png,.jpg,.jpeg,.webp,.gif,.bmp" multiple hidden />
+
+    <p class="hint">AI sets the phrasing and pauses. Local chunking runs offline, instantly.</p>
+
+    <div id="library" class="library" hidden>
+      <div class="source-head">
+        <h2>Saved</h2>
+      </div>
+      <div id="libraryList" class="lib-list"></div>
+    </div>
+  </section>
+
+  <section class="reader" aria-label="Reader">
+    <div class="toolbar">
+      <button id="playBtn" class="play" type="button">Play</button>
+      <button id="repeatBtn" type="button" title="Repeat this phrase (R)"><span aria-hidden="true">↺</span> Phrase</button>
+      <button id="wordsBtn" type="button" title="Repeat the last three words (W)"><span aria-hidden="true">⋯</span> 3 words</button>
+      <button id="slowBtn" type="button" title="Repeat this phrase slowly (S)">Slow</button>
+      <button id="prevBtn" class="icon" type="button" title="Previous phrase (←)" aria-label="Previous phrase">←</button>
+      <button id="nextBtn" class="icon" type="button" title="Next phrase (→)" aria-label="Next phrase">→</button>
+      <div class="spacer"></div>
+      <label class="toggle" title="Voice commands: say repeat, slower, pause">
+        <input type="checkbox" id="mic" />
+        <span>voice</span>
+      </label>
+      <label class="toggle" title="Dim everything except the current phrase">
+        <input type="checkbox" id="focus" checked />
+        <span>focus</span>
+      </label>
+    </div>
+
+    <div class="toolbar settings">
+      <label class="slider">
+        <span class="label">speed</span>
+        <input type="range" id="rate" min="0.5" max="1.2" step="0.05" value="0.85" />
+        <output id="rateVal">0.85×</output>
+      </label>
+      <label class="slider">
+        <span class="label">breath</span>
+        <input type="range" id="breath" min="0.5" max="2" step="0.1" value="1" />
+        <output id="breathVal">1.0×</output>
+      </label>
+      <label class="field">
+        <span class="label">repeat</span>
+        <select id="echo">
+          <option value="0">once</option>
+          <option value="1">twice</option>
+          <option value="2">three times</option>
+        </select>
+      </label>
+      <label class="field grow">
+        <span class="label">voice</span>
+        <select id="voice"><option value="">default</option></select>
+      </label>
+      <label class="toggle" title="Announce each new line or paragraph">
+        <input type="checkbox" id="cues" checked />
+        <span>line cue</span>
+      </label>
+    </div>
+
+    <div class="progress" aria-hidden="true"><div id="progressFill"></div></div>
+
+    <div id="scroll" class="scroll">
+      <h1 id="docTitle" class="doc-title" hidden></h1>
+      <div id="script" class="script"></div>
+      <div id="empty" class="empty">
+        <p class="empty-lead">Read slowly. Repeat anything.</p>
+        <p>Paste text on the left, or drop a photo, PDF or docx anywhere on this page. It breaks into breath-sized phrases, reads them at a calm pace, and repeats the last phrase — or just the last few words — on command.</p>
+        <p class="empty-keys"><kbd>space</kbd> play · <kbd>R</kbd> phrase · <kbd>W</kbd> 3 words · <kbd>S</kbd> slow · <kbd>E</kbd> AI edit · <kbd>C</kbd> line cue · <kbd>←</kbd><kbd>→</kbd> move</p>
+      </div>
+    </div>
+
+    <footer class="status">
+      <span id="status">ready</span>
+      <span id="meta"></span>
+    </footer>
+  </section>
+</main>
+
+<div id="dropOverlay" class="drop-overlay" hidden>
+  <div class="drop-card">
+    <div class="drop-title">Drop it here</div>
+    <div class="drop-sub">text · PDF · docx · photo of a page</div>
+  </div>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
