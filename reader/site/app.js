@@ -40,6 +40,8 @@ const el = {
   mic: $("#mic"),
   cues: $("#cues"),
   groupSize: $("#groupSize"),
+  write: $("#write"),
+  writeVal: $("#writeVal"),
   focus: $("#focus"),
   dimBtn: $("#dimBtn"),
   aiStatus: $("#aiStatus"),
@@ -56,10 +58,10 @@ const el = {
   toast: $("#toast"),
 };
 
-const SETTINGS_KEY = "readslow.settings.v1";
+const SETTINGS_KEY = "readslow.settings.v2";
 const TEXT_KEY = "readslow.text.v1";
 const POS_KEY = "readslow.pos.v1";
-const DEFAULTS = { rate: 0.85, breath: 1, echo: 0, voiceURI: "", focus: true, dim: false, style: "study", cues: true, groupSize: 4 };
+const DEFAULTS = { rate: 0.72, breath: 1, echo: 0, voiceURI: "", focus: true, dim: false, style: "study", cues: true, groupSize: 3, groupPause: 900 };
 
 const SAMPLE = `Photosynthesis is the process by which plants turn light energy into chemical energy. It happens in two stages: the light reactions, which need sunlight and water, and the Calvin cycle, which fixes carbon dioxide into sugar. Chlorophyll absorbs mostly red and blue light, which is why leaves look green. The rate of photosynthesis rises with light intensity up to a saturation point, then levels off. Temperature matters too — enzymes lose shape above about forty degrees Celsius, and the whole process stalls.`;
 
@@ -323,7 +325,10 @@ function updateProgress() {
 
   const rest = state.chunks.slice(state.idx);
   const words = rest.reduce((sum, chunk) => sum + countWords(chunk.text), 0);
-  const seconds = estimateSeconds(rest, settings.rate);
+  const timed = rest.map((chunk) => (
+    chunk.beat ? { ...chunk, pauseMs: Math.max(chunk.pauseMs || 0, settings.groupPause || 0) } : chunk
+  ));
+  const seconds = estimateSeconds(timed, settings.rate);
   el.meta.textContent = `phrase ${state.idx + 1}/${total} · ${words} words · ~${fmtTime(seconds)} left`;
 }
 
@@ -525,7 +530,8 @@ function scheduleNext(index, chunk, rate) {
     return;
   }
 
-  const pause = Math.round((chunk.pauseMs ?? 250) * settings.breath);
+  const base = chunk.beat ? Math.max(chunk.pauseMs ?? 160, settings.groupPause ?? 900) : (chunk.pauseMs ?? 250);
+  const pause = Math.round(base * settings.breath);
   pendingTimer = setTimeout(() => {
     if (!state.playing) return;
     if (index + 1 >= state.chunks.length) {
@@ -1128,6 +1134,12 @@ el.groupSize.addEventListener("change", () => {
   }
 });
 
+el.write.addEventListener("input", () => {
+  settings.groupPause = Number(el.write.value);
+  el.writeVal.textContent = `${settings.groupPause} ms`;
+  saveSettings();
+});
+
 el.dimBtn.addEventListener("click", () => {
   settings.dim = !settings.dim;
   document.body.classList.toggle("dim", settings.dim);
@@ -1204,7 +1216,9 @@ function boot() {
   el.echo.value = String(settings.echo);
   el.focus.checked = settings.focus;
   el.cues.checked = settings.cues;
-  el.groupSize.value = String(settings.groupSize ?? 4);
+  el.groupSize.value = String(settings.groupSize ?? 3);
+  el.write.value = String(settings.groupPause ?? 900);
+  el.writeVal.textContent = `${settings.groupPause ?? 900} ms`;
   document.body.classList.toggle("focus", settings.focus);
   el.dimBtn.textContent = settings.dim ? "light" : "dim";
   document.body.classList.toggle("dim", settings.dim);

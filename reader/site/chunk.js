@@ -254,6 +254,7 @@ export function microChunks(chunks, size = 4) {
       out.push({
         text: group,
         pauseMs,
+        beat: !last,
         emphasis: emphasis.filter((word) => group.toLowerCase().includes(String(word).toLowerCase())),
         cue: i === 0 ? (chunk.cue || "") : "",
         para: chunk.para,

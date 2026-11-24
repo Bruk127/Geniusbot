@@ -80,8 +80,8 @@
     <div class="toolbar settings">
       <label class="slider">
         <span class="label">speed</span>
-        <input type="range" id="rate" min="0.5" max="1.2" step="0.05" value="0.85" />
-        <output id="rateVal">0.85×</output>
+        <input type="range" id="rate" min="0.5" max="1.2" step="0.05" value="0.72" />
+        <output id="rateVal">0.72×</output>
       </label>
       <label class="slider">
         <span class="label">breath</span>
@@ -92,9 +92,14 @@
         <span class="label">group</span>
         <select id="groupSize" title="Words per reading group">
           <option value="0">phrase</option>
-          <option value="3">3 words</option>
-          <option value="4" selected>4 words</option>
+          <option value="3" selected>3 words</option>
+          <option value="4">4 words</option>
         </select>
+      </label>
+      <label class="slider">
+        <span class="label">write</span>
+        <input type="range" id="write" min="0" max="2500" step="100" value="900" />
+        <output id="writeVal">900 ms</output>
       </label>
       <label class="field">
         <span class="label">repeat</span>

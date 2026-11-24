@@ -34,7 +34,7 @@ The server reads the cent provider straight out of your opencode config, so ther
 Copy `.env.example` to `.env` only if you want to override something. Without a key the app still works — it chunks locally and speaks through the browser voice.## What it does
 
 - **Breath-sized phrases.** 4–13 words per phrase, split at commas, conjunctions, and natural seams. Never mid-name, mid-number, mid-formula.
-- **Word groups.** Default reads 4 words at a time with a 160 ms beat between groups. Switch to 3 words or back to whole phrases with the **group** control. Punctuation keeps its full pause.
+- **Word groups.** Default reads 3 words at 0.72× with a 900 ms **write** beat between groups — enough time to put the words down. Slide **write** up to 2500 ms for slow dictation, or switch **group** to 4 words or whole phrases. Punctuation always gets at least the write beat.
 - **Calm pace.** Default 0.85× speed with a per-phrase pause scaled to the punctuation. Both are adjustable.
 - **Repeat controls.** Repeat the current phrase, repeat the last three words, or repeat the phrase slowly. Click any word to start reading from there.
 - **Echo mode.** Read every phrase once, twice, or three times before moving on.
