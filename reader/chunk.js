@@ -226,6 +226,43 @@ export function chunkText(input, options = {}) {
   };
 }
 
+/**
+ * Re-cut phrases into tiny word groups for slow, deliberate reading.
+ * Punctuation still gets its full pause; plain group ends get a short beat.
+ */
+export function microChunks(chunks, size = 4) {
+  if (!size || size < 2) return chunks;
+
+  const out = [];
+  for (const chunk of chunks) {
+    const words = String(chunk.text || "").trim().split(/\s+/).filter(Boolean);
+    if (words.length <= size) {
+      out.push(chunk);
+      continue;
+    }
+
+    const emphasis = chunk.emphasis || [];
+    for (let i = 0; i < words.length; i += size) {
+      const group = words.slice(i, i + size).join(" ");
+      const last = i + size >= words.length;
+      const marked = /[.!?:;,—–]$/.test(group.replace(/["'”’)\]]+$/, ""));
+
+      let pauseMs = 160;
+      if (marked) pauseMs = pauseFor(group, false);
+      if (last) pauseMs = Math.max(pauseMs, chunk.pauseMs || 0);
+
+      out.push({
+        text: group,
+        pauseMs,
+        emphasis: emphasis.filter((word) => group.toLowerCase().includes(String(word).toLowerCase())),
+        cue: i === 0 ? (chunk.cue || "") : "",
+        para: chunk.para,
+      });
+    }
+  }
+  return out;
+}
+
 export function estimateSeconds(chunks, rate = 0.85) {
   let words = 0;
   let pauses = 0;

@@ -1,7 +1,7 @@
 // reader/app.js
 // Browser side: phrase rendering, calm playback, repeat controls, voice commands, AI prep.
 
-import { chunkText, countWords, estimateSeconds } from "./chunk.js";
+import { chunkText, countWords, estimateSeconds, microChunks } from "./chunk.js";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -38,6 +38,7 @@ const el = {
   voice: $("#voice"),
   mic: $("#mic"),
   cues: $("#cues"),
+  groupSize: $("#groupSize"),
   focus: $("#focus"),
   dimBtn: $("#dimBtn"),
   aiStatus: $("#aiStatus"),
@@ -50,7 +51,7 @@ const el = {
 const SETTINGS_KEY = "readslow.settings.v1";
 const TEXT_KEY = "readslow.text.v1";
 const POS_KEY = "readslow.pos.v1";
-const DEFAULTS = { rate: 0.85, breath: 1, echo: 0, voiceURI: "", focus: true, dim: false, style: "study", cues: true };
+const DEFAULTS = { rate: 0.85, breath: 1, echo: 0, voiceURI: "", focus: true, dim: false, style: "study", cues: true, groupSize: 4 };
 
 const SAMPLE = `Photosynthesis is the process by which plants turn light energy into chemical energy. It happens in two stages: the light reactions, which need sunlight and water, and the Calvin cycle, which fixes carbon dioxide into sugar. Chlorophyll absorbs mostly red and blue light, which is why leaves look green. The rate of photosynthesis rises with light intensity up to a saturation point, then levels off. Temperature matters too — enzymes lose shape above about forty degrees Celsius, and the whole process stalls.`;
 
@@ -60,6 +61,7 @@ const supported = Boolean(synth && window.SpeechSynthesisUtterance);
 
 const state = {
   chunks: [],
+  baseChunks: [],
   idx: 0,
   playing: false,
   title: "",
@@ -265,7 +267,9 @@ function applyChunks(chunks, title, source) {
   stopAll();
   state.playing = false;
   state.finished = false;
-  state.chunks = withParagraphs(chunks).filter((chunk) => chunk && String(chunk.text || "").trim());
+  state.baseChunks = chunks;
+  const shaped = microChunks(chunks, settings.groupSize);
+  state.chunks = withParagraphs(shaped).filter((chunk) => chunk && String(chunk.text || "").trim());
   state.idx = 0;
   state.title = title || guessTitle(el.source.value || "");
   state.source = source;
@@ -1101,6 +1105,17 @@ el.cues.addEventListener("change", () => {
   if (settings.cues) toast("line cues on — each new paragraph is announced");
 });
 
+el.groupSize.addEventListener("change", () => {
+  settings.groupSize = Number(el.groupSize.value);
+  saveSettings();
+  if (state.baseChunks.length) {
+    const title = state.title;
+    const source = state.source;
+    applyChunks(state.baseChunks, title, source);
+    setStatus(`reading ${settings.groupSize ? `${settings.groupSize} words at a time` : "whole phrases"}`);
+  }
+});
+
 el.dimBtn.addEventListener("click", () => {
   settings.dim = !settings.dim;
   document.body.classList.toggle("dim", settings.dim);
@@ -1176,6 +1191,7 @@ function boot() {
   el.echo.value = String(settings.echo);
   el.focus.checked = settings.focus;
   el.cues.checked = settings.cues;
+  el.groupSize.value = String(settings.groupSize ?? 4);
   document.body.classList.toggle("focus", settings.focus);
   el.dimBtn.textContent = settings.dim ? "light" : "dim";
   document.body.classList.toggle("dim", settings.dim);
