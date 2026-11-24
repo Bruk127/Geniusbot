@@ -41,6 +41,8 @@ const el = {
   groupSize: $("#groupSize"),
   write: $("#write"),
   writeVal: $("#writeVal"),
+  gap: $("#gap"),
+  gapVal: $("#gapVal"),
   focus: $("#focus"),
   dimBtn: $("#dimBtn"),
   aiStatus: $("#aiStatus"),
@@ -53,7 +55,7 @@ const el = {
 const SETTINGS_KEY = "readslow.settings.v2";
 const TEXT_KEY = "readslow.text.v1";
 const POS_KEY = "readslow.pos.v1";
-const DEFAULTS = { rate: 0.72, breath: 1, echo: 0, voiceURI: "", focus: true, dim: false, style: "study", cues: true, groupSize: 3, groupPause: 900 };
+const DEFAULTS = { rate: 0.72, breath: 1, echo: 0, voiceURI: "", focus: true, dim: false, style: "study", cues: true, groupSize: 3, groupPause: 900, gap: 1200 };
 
 const SAMPLE = `Photosynthesis is the process by which plants turn light energy into chemical energy. It happens in two stages: the light reactions, which need sunlight and water, and the Calvin cycle, which fixes carbon dioxide into sugar. Chlorophyll absorbs mostly red and blue light, which is why leaves look green. The rate of photosynthesis rises with light intensity up to a saturation point, then levels off. Temperature matters too — enzymes lose shape above about forty degrees Celsius, and the whole process stalls.`;
 
@@ -318,7 +320,7 @@ function updateProgress() {
   const rest = state.chunks.slice(state.idx);
   const words = rest.reduce((sum, chunk) => sum + countWords(chunk.text), 0);
   const timed = rest.map((chunk) => (
-    chunk.beat ? { ...chunk, pauseMs: Math.max(chunk.pauseMs || 0, settings.groupPause || 0) } : chunk
+    chunk.beat ? { ...chunk, pauseMs: Math.max(chunk.pauseMs || 0, settings.groupPause || 0) + (settings.gap || 0) } : chunk
   ));
   const seconds = estimateSeconds(timed, settings.rate);
   el.meta.textContent = `phrase ${state.idx + 1}/${total} · ${words} words · ~${fmtTime(seconds)} left`;
@@ -392,6 +394,15 @@ function startWordTimers(chunkIndex, fromWord, totalWords, rate, myRun) {
     }, (word - fromWord) * msPerWord);
     wordTimers.push(timer);
   }
+}
+
+function afterGap(action) {
+  const run = runId;
+  const gap = settings.gap ?? 1200;
+  if (!gap) return action();
+  pendingTimer = setTimeout(() => {
+    if (run === runId) action();
+  }, gap);
 }
 
 function speakAdhoc(text, onDone) {
@@ -518,12 +529,12 @@ function scheduleNext(index, chunk, rate) {
     pendingTimer = setTimeout(() => {
       if (!state.playing) return;
       speakChunk(index, { rateOverride: rate });
-    }, 380);
+    }, settings.gap ?? 380);
     return;
   }
 
   const base = chunk.beat ? Math.max(chunk.pauseMs ?? 160, settings.groupPause ?? 900) : (chunk.pauseMs ?? 250);
-  const pause = Math.round(base * settings.breath);
+  const pause = Math.round((base + (settings.gap ?? 0)) * settings.breath);
   pendingTimer = setTimeout(() => {
     if (!state.playing) return;
     if (index + 1 >= state.chunks.length) {
@@ -589,10 +600,11 @@ function finish() {
 
 function repeatChunk({ slow = false } = {}) {
   if (!state.chunks.length) return;
+  stopAll();
   state.playing = true;
   echoLeft = 0;
   const rate = slow ? Math.max(0.5, Math.round(settings.rate * 0.7 * 100) / 100) : undefined;
-  speakChunk(state.idx, { skipCue: true, ...(rate ? { rateOverride: rate } : {}) });
+  afterGap(() => speakChunk(state.idx, { skipCue: true, ...(rate ? { rateOverride: rate } : {}) }));
   updateUI();
   setStatus(slow ? "repeating slowly" : "repeating phrase");
 }
@@ -609,10 +621,11 @@ function repeatWords(count = 3) {
   const snippet = words.slice(startWord, endWord).join(" ");
   if (!snippet) return;
 
+  stopAll();
   state.playing = true;
   echoLeft = 0;
 
-  speakChunk(index, {
+  afterGap(() => speakChunk(index, {
     startWord,
     skipCue: true,
     rateOverride: Math.max(0.55, settings.rate * 0.85),
@@ -625,7 +638,7 @@ function repeatWords(count = 3) {
         speakChunk(index, { startWord: endWord, skipCue: true });
       }
     },
-  });
+  }));
 
   updateUI();
   setStatus(`repeating "${snippet}"`);
@@ -1128,6 +1141,12 @@ el.write.addEventListener("input", () => {
   saveSettings();
 });
 
+el.gap.addEventListener("input", () => {
+  settings.gap = Number(el.gap.value);
+  el.gapVal.textContent = `${settings.gap} ms`;
+  saveSettings();
+});
+
 el.dimBtn.addEventListener("click", () => {
   settings.dim = !settings.dim;
   document.body.classList.toggle("dim", settings.dim);
@@ -1206,6 +1225,8 @@ function boot() {
   el.groupSize.value = String(settings.groupSize ?? 3);
   el.write.value = String(settings.groupPause ?? 900);
   el.writeVal.textContent = `${settings.groupPause ?? 900} ms`;
+  el.gap.value = String(settings.gap ?? 1200);
+  el.gapVal.textContent = `${settings.gap ?? 1200} ms`;
   document.body.classList.toggle("focus", settings.focus);
   el.dimBtn.textContent = settings.dim ? "light" : "dim";
   document.body.classList.toggle("dim", settings.dim);
